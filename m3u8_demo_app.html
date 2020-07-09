@@ -1,0 +1,86 @@
+<html>
+<head>
+<!-- This demo uses JW Player for HLS playback. To resolve the placeholder in the <script> tag below, sign up on https://jwplayer.com, create a new player on https://dashboard.jwplayer.com/#/players/list, copy the "Cloud-Hosted Player Library" path of the created player, and paste it where you see {JWPLAYER_TOKEN}. -->
+<script src="https://cdn.jwplayer.com/libraries/{JWPLAYER_TOKEN}.js"></script>
+<script>
+    async function fetchPlaylist() {
+        // This sample app demonstrates how to use live M3U8 functionality through the Vimeo API.
+        // It's not adapted for use in a production environment.
+        // 
+        // Better logic would be more in line with this:
+        // return (await (await fetch("https://my-server.example.com/my-end-point")).json()).path_to_m3u8_link;
+        
+        // And you should run it on the server side.
+        // WARNING: Running this logic on the client side leaks your Vimeo authorization token, which poses a security threat.
+        
+        // In either case, you're subject to Vimeo API request rate limits. See https://developer.vimeo.com/guidelines/rate-limiting for more information.
+        // To work around rate limiting, add caching logic here, like this:
+        // if( new Date() > cacheExpireDate ) {
+        //    
+        //    cachedLink = /* see logic bellow */
+        //    cacheExpireDate = (new Date()) + 10; // valid for 10 seconds
+        // }
+        // return cachedLink
+        
+        // Simulate server logic for fetching the video ID and auth token:
+        const videoID = document.getElementById("videoID").value 
+        const auth = document.getElementById("auth").value
+        
+        const resp = await fetch(`https://api.vimeo.com/me/videos/${videoID}/m3u8_playback`, {headers: {"Authorization": auth}});
+        if(resp.status !== 200) {
+            throw new Error("server error");
+        }
+        const link = (await resp.json()).m3u8_playback_url
+        console.log(link);
+        return link;
+    }
+
+    async function initPlayer() {
+        try {
+            const url = await fetchPlaylist();
+            const player = jwplayer("player").setup({
+              "playlist": {file: url},
+              "height": 360,
+              "width": 640,
+              "autostart": "viewable"
+            })
+            player.on("error", async (err) => {
+                console.log("player error", err);
+                if( err.code >= 232400 && err.code <= 232599 ) {
+                    // as per https://developer.jwplayer.com/jwplayer/docs/jw8-player-errors-reference#section-media-playback-hls-js
+                    // 232400-232599	 A manifest request returned with an HTTP status indicating failure.	
+                    // Try to fetch a new manifest...
+                    // Possible causes:
+                    //    - The fetched manifest has expired.
+                    //    - The current session has expired; fetch a new HLS to start a new session.
+                    //    - The current session has ended:
+                    try {
+                        const newURL = await fetchPlaylist();
+                        console.log("newURL", newURL);
+                        player.load({file: newURL}); 
+                        player.play();
+                    } catch(e) {
+                        console.log("manifest fetch error", e);
+                        document.getElementById("error").innerHTML=`Can't fetch playlist ${e}. Please retry.`;
+                    }
+                }
+            });
+        } catch(e) {
+            document.getElementById("error").innerHTML=`Can't fetch playlist ${e}. Please retry.`;
+            return;
+        }
+    }
+</script>
+</head>
+<body>
+<h1>Server config</h1>
+<label for="auth">Auth string: should be generated on the server side (<a href="https://developer.vimeo.com/api/authentication">learn how</a>)</label> <input id="auth" type="text" value="Bearer {ACCESS_TOKEN}"></input><br/>
+<label for="videoID">Video ID: should be received on the server side with the Vimeo API (<a href="https://developer.vimeo.com/api/reference/videos">learn how</a>)</label> <input id="videoID" type="text" value="4xxxxxxxx"></input><br/>
+<h1>jwplayer (Client)</h1>
+<div id="error"></div>
+<div id="player">
+    <button onclick="initPlayer()">Watch now</button>
+</div>
+
+</body>
+</html>
