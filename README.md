@@ -1,5 +1,5 @@
 # vimeo-live-player-examples
-This simple application shows how developers can use Vimeo Live M3U8 links with a third-party player like [JWPlayer](https://jwplayer.com).
+This simple application demonstrates how to use Vimeo Live M3U8 links with a third-party player like [JWPlayer](https://jwplayer.com).
 
 ## Prerequisites
 - Access to the Vimeo [Live API](https://developer.vimeo.com/api/live), only available to Enterprise customers. Learn more about [Vimeo Enterprise](https://vimeo.com/enterprise?mkc=liveapi).
